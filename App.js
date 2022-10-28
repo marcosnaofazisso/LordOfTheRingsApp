@@ -2,14 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Keyboard } from 'react-native';
 
 import api from './api';
-
 import ConversationItem from './ConversationItem';
+
+import Voice from '@react-native-community/voice';
+import Tts from 'react-native-tts';
 
 export default function App() {
 
   const [sessionId, setSessionId] = useState("")
   const [message, setMessage] = useState({})
   const [conversation, setConversation] = useState([])
+
+  const [audioSended, setAudioSended] = useState(false)
+
 
   useEffect(() => {
     const getSessionId = async () => {
@@ -25,8 +30,7 @@ export default function App() {
     if (sessionId !== "") {
       const getFirstMessages = async () => {
         const response = await api.post('/api/message', { "session_id": sessionId })
-        const arrayOfAnswers = response.data.output.generic
-        arrayOfAnswers.forEach(answer => {
+        response.data.output.generic.forEach(answer => {
           setConversation((conversation) => [...conversation, { text: answer.text, user: false }])
         })
       }
@@ -34,6 +38,13 @@ export default function App() {
       return
     }
   }, [sessionId])
+
+  useEffect(() => {
+    console.log("Loading....")
+    if (Object.keys(message).length > 0) handleSubmit()
+  }, [audioSended])
+
+
 
   const handleSubmit = () => {
     Keyboard.dismiss()
@@ -53,6 +64,58 @@ export default function App() {
       })
       .catch(error => console.log(error))
   }
+
+
+  const listenAnswers = () => {
+    //language for Brazilian Portuguese
+    Tts.setDefaultLanguage('pt-BR');
+    for (i = 3; i > 0; i--) {
+      const answer = conversation[conversation.length - i].text;
+      Tts.speak(answer);
+    }
+  };
+
+  const onSpeechRecognized = (e) => {
+    console.log("recogninzed", e)
+  }
+
+  const onSpeechStart = (e) => {
+    console.log("start handler==>>>", e)
+  }
+
+  const onSpeechEnd = (e) => {
+    console.log("stop handler", e)
+  }
+
+  const onSpeechResults = (e) => {
+    let text = e.value[0]
+    console.log("speech result handler", e)
+    setMessage({ text: text, user: true })
+    setAudioSended(current => !current)
+  }
+
+  const startRecording = async () => {
+    try {
+      //language for Brazilian Portuguese
+      Voice.start('pt-Br')
+    } catch (error) {
+      console.log("error raised", error)
+    }
+  }
+
+  const stopRecording = async () => {
+    try {
+      Voice.stop()
+    } catch (error) {
+      console.log("error raised", error)
+    }
+  }
+
+
+  Voice.onSpeechStart = onSpeechStart;
+  Voice.onSpeechEnd = onSpeechEnd;
+  Voice.onSpeechResults = onSpeechResults;
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -75,12 +138,24 @@ export default function App() {
           value={message}
           onChangeText={(text) => setMessage({ text: text, user: true })} />
         <TouchableOpacity style={styles.sendButton} onPress={handleSubmit} >
-          <Text style={styles.sendButtonText}>Send</Text>
+          <Text style={styles.buttonText}>Send</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.audioField}>
+        <TouchableOpacity style={styles.listenButton} onPress={listenAnswers}>
+          <Text style={styles.buttonText}>Listen</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.recordButton}
+          activeOpacity={0.9}
+          onPressIn={startRecording}
+          onPressOut={stopRecording}>
+          <Text style={styles.buttonText}>Record</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
-  );
-};
+  )
+}
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -99,7 +174,7 @@ const styles = StyleSheet.create({
   },
   messageField: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'center',
     padding: 10,
     borderWidth: 1,
     borderRadius: 8,
@@ -111,7 +186,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     borderColor: "gray",
-    width: 280,
+    width: 250,
     backgroundColor: "#fff"
   },
   sendButton: {
@@ -120,8 +195,32 @@ const styles = StyleSheet.create({
     padding: 15,
     marginLeft: 10,
   },
-  sendButtonText: {
+  buttonText: {
     color: '#FFF',
   },
-
-});
+  audioField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    borderColor: "gray",
+    borderWidth: 1,
+    borderRadius: 8,
+    backgroundColor: "#f2f2f2"
+  },
+  recordButton: {
+    flex: 1,
+    margin: 5,
+    backgroundColor: '#ff0000',
+    borderRadius: 8,
+    padding: 15,
+    color: '#fff'
+  },
+  listenButton: {
+    flex: 1,
+    margin: 5,
+    backgroundColor: 'tomato',
+    borderRadius: 8,
+    padding: 15,
+  },
+})
