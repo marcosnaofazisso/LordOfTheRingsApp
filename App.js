@@ -12,7 +12,6 @@ export default function App() {
   const [sessionId, setSessionId] = useState("")
   const [message, setMessage] = useState({})
   const [conversation, setConversation] = useState([])
-
   const [audioSended, setAudioSended] = useState(false)
 
 
@@ -156,6 +155,8 @@ export default function App() {
     </SafeAreaView>
   )
 }
+
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
